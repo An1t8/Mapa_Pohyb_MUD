@@ -111,13 +111,21 @@ public class MudClientSession implements Runnable {
         return """
                 Dostupne prikazy:
                 - pomoc | help
+                  Zobrazi seznam prikazu a kratky popis pouziti.
                 - prozkoumej | look
+                  Vypise nazev mistnosti, popis, vychody, predmety, NPC a ostatni hrace.
                 - jdi <mistnost> | fly <planet>
+                  Presune hrace do sousedni mistnosti.
                 - vezmi <predmet> | take <item>
+                  Vezme predmet z aktualni mistnosti do inventare.
                 - odloz <predmet> | drop <item>
+                  Odlozi predmet z inventare zpet do mistnosti.
                 - inventar | inventory
+                  Zobrazi obsah inventare a maximalni kapacitu.
                 - mluv <npc> | talk <npc>
+                  Promluvi s NPC postavou v aktualni mistnosti.
                 - konec | quit
+                  Bezpecne ukonci spojeni se serverem.
                 """;
     }
 

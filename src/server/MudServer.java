@@ -9,7 +9,7 @@ import java.util.concurrent.Executors;
 
 /**
  * TCP server that accepts multiple players and gives each one an independent
- * session on a virtual thread.
+ * session on a worker thread.
  */
 public class MudServer {
 
@@ -23,7 +23,7 @@ public class MudServer {
 
     public void start() throws IOException {
         try (ServerSocket serverSocket = new ServerSocket();
-             ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
+             ExecutorService executorService = Executors.newCachedThreadPool()) {
 
             serverSocket.setReuseAddress(true);
             serverSocket.bind(new InetSocketAddress(port));
