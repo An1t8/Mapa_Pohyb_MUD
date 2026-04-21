@@ -49,7 +49,6 @@ public class GameConsole {
             System.out.println("Station not found in the universe.");
             return;
         }
-        universe = new Universe();
         playerLocation = new Location(startPlanet);
         crystalBag = new CrystalBag();
         baseStation = new BaseStation(startPlanet);
@@ -62,8 +61,6 @@ public class GameConsole {
         prompter = galacticSailor.getPrompter();
         show = new ShowCrystals(galacticSailor, baseStation);
         questionsControler = new QuestionsControler(galacticSailor, crystalBag);
-
-        QuestionsControler questionsControler = new QuestionsControler(galacticSailor, crystalBag);
         saveCommand = new SaveCommand(this);
         loadCommand = new LoadCommand(this);
 

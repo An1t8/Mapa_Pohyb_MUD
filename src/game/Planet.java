@@ -41,6 +41,10 @@ public class Planet implements Serializable {
         return connections.get(direction);
     }
 
+    public Map<String, Planet> getConnections() {
+        return Map.copyOf(connections);
+    }
+
 
     public Map<Question, List<String>> getQuestions() {
         return questions;
@@ -48,4 +52,3 @@ public class Planet implements Serializable {
 
 
 }
-
