@@ -22,8 +22,8 @@ public class MudServer {
     }
 
     public void start() throws IOException {
-        try (ServerSocket serverSocket = new ServerSocket();
-             ExecutorService executorService = Executors.newCachedThreadPool()) {
+        ExecutorService executorService = Executors.newCachedThreadPool();
+        try (ServerSocket serverSocket = new ServerSocket()) {
 
             serverSocket.setReuseAddress(true);
             serverSocket.bind(new InetSocketAddress(port));
@@ -34,6 +34,8 @@ public class MudServer {
                 Socket clientSocket = serverSocket.accept();
                 executorService.submit(new MudClientSession(clientSocket, world));
             }
+        } finally {
+            executorService.shutdown();
         }
     }
 }
