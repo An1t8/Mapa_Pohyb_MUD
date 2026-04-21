@@ -34,8 +34,8 @@ public class CrystalBagTest {
         crystalBag.addCrystal(crystal);
         System.out.println("Number of crystals in crystalBag: " + crystalBag.getCrystals().size());
         Assertions.assertEquals(1, crystalBag.getCrystals().size());
-        System.out.println("Name of the first crystal: " + crystalBag.getCrystals().getFirst().getName());
-        Assertions.assertEquals("Rosetta", crystalBag.getCrystals().getFirst().getName());
+        System.out.println("Name of the first crystal: " + crystalBag.getCrystals().get(0).getName());
+        Assertions.assertEquals("Rosetta", crystalBag.getCrystals().get(0).getName());
         System.out.println("test finished successfully");
     }
 

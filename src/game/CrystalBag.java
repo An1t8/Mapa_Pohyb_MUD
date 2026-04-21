@@ -31,7 +31,7 @@ public class CrystalBag implements Serializable {
      */
     public Crystal removeCrystal() {
         if (!crystals.isEmpty()) {
-            return crystals.removeFirst();
+            return crystals.remove(0);
         }
         return null;
     }
