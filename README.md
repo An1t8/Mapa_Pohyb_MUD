@@ -45,11 +45,4 @@ java -cp out main.Main --console
 
 ## IntelliJ IDEA
 
-If IntelliJ shows a JUnit error for `org.junit.jupiter.api`, open the project as a Maven project so IDEA downloads the test dependency automatically:
-
-1. Open the folder in IntelliJ IDEA.
-2. Open the `pom.xml` file.
-3. Click `Load Maven Changes` or `Import Maven Project`.
-4. Run `main.Main`.
-
-`src/test` is configured as test code, so it should not block running the game.
+The project can be opened and run directly as a plain Java project. Run `main.Main` and pass `--port 5555` if you want a specific port.
