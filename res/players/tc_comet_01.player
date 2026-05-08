@@ -1,0 +1,9 @@
+username=tc_comet_01
+salt=U1BTRV9UQ19DT01FVCE=
+hash=gzPB7SRLnBMT1Uc7TFM1t69VaMuGKnWPYMM5oM8Juq4=
+planet=Station
+inventory=Rosetta Crystal
+stationCrystals=Colverde Crystal|Luminara Crystal
+comet1=Crystalia Crystal|Lavatron Crystal
+comet2=Aquarix Crystal
+finished=false

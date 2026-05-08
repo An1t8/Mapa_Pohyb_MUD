@@ -8,83 +8,133 @@ import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 
-/**
- * Handles one TCP client from name selection to disconnect.
- */
 public class MudClientSession implements Runnable {
-
     private final Socket socket;
     private final MudWorld world;
-
+    private final PlayerAccountStore accountStore;
+    private final ServerLogger logger;
     private MudPlayer player;
     private BufferedReader reader;
     private BufferedWriter writer;
-    private boolean running;
+    private boolean running = true;
 
-    public MudClientSession(Socket socket, MudWorld world) {
+    public MudClientSession(Socket socket, MudWorld world, PlayerAccountStore accountStore, ServerLogger logger) {
         this.socket = socket;
         this.world = world;
-        this.running = true;
+        this.accountStore = accountStore;
+        this.logger = logger;
     }
 
     @Override
     public void run() {
         try (socket) {
-            socket.setKeepAlive(true);
             reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
             writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
+            logger.log("INFO", "CONNECT " + socket.getRemoteSocketAddress());
 
-            writeLine("Vitej v Mapa_Pohyb_MUD.");
-            writeLine("Pripojil(a) ses k textovemu hernimu svetu pres TCP.");
-            player = registerPlayer();
+            player = loginFlow();
             if (player == null) {
                 return;
             }
 
-            writeLine("Ahoj, " + player.getName() + ".");
-            writeLine("Pouzij 'pomoc' nebo 'help' pro seznam prikazu.");
-            writeLine(world.describeRoom(player));
+            writeLine(world.intro(player));
 
             while (running) {
-                write("> ");
+                write(world.promptFor(player));
                 String input = reader.readLine();
                 if (input == null) {
                     break;
                 }
-
-                String response = handleCommand(input);
+                logger.log("CMD", player.getName() + ": " + input);
+                String response = handleInput(input);
                 if (!response.isBlank()) {
                     writeLine(response);
                 }
             }
-        } catch (IOException ignored) {
-            // Sudden disconnect should not crash the server.
+        } catch (IOException e) {
+            logger.log("ERROR", "SESSION " + e.getMessage());
         } finally {
-            world.removePlayer(player);
+            if (player != null) {
+                accountStore.saveProgress(player);
+                world.removePlayer(player);
+            }
+            logger.log("INFO", "DISCONNECT " + (player != null ? player.getName() : "unknown"));
         }
     }
 
-    private MudPlayer registerPlayer() throws IOException {
+    private MudPlayer loginFlow() throws IOException {
         while (true) {
-            write("Zadej sve jmeno: ");
-            String requestedName = reader.readLine();
-            if (requestedName == null) {
+            writeLine("Choose action: login | register | exit");
+            write("Action: ");
+            String action = reader.readLine();
+            if (action == null) {
                 return null;
             }
 
-            MudPlayer registeredPlayer = world.addPlayer(requestedName);
-            if (registeredPlayer != null) {
-                return registeredPlayer;
+            String normalizedAction = MudWorld.normalize(action);
+            if ("exit".equals(normalizedAction)) {
+                return null;
             }
 
-            writeLine("Tohle jmeno je prazdne nebo uz ho pouziva jiny hrac. Zkus to znovu.");
+            if (!"login".equals(normalizedAction) && !"register".equals(normalizedAction)) {
+                writeLine("Unknown action type.");
+                continue;
+            }
+
+            write("Your name: ");
+            String name = reader.readLine();
+            if (name == null) {
+                return null;
+            }
+
+            write("Password: ");
+            String pass = reader.readLine();
+            if (pass == null) {
+                return null;
+            }
+
+            if ("register".equals(normalizedAction)) {
+                if (!accountStore.register(name, pass)) {
+                    writeLine("Registration failed (name already exists or password is empty).");
+                    continue;
+                }
+                writeLine("Registration successful, continuing with login.");
+            }
+
+            PlayerAccountStore.AccountData data = accountStore.authenticate(name, pass);
+            if (data == null) {
+                writeLine("Incorrect login.");
+                continue;
+            }
+
+            MudPlayer activePlayer = world.addPlayer(name, data);
+            if (activePlayer == null) {
+                writeLine("This player is already connected.");
+                continue;
+            }
+            return activePlayer;
         }
     }
 
-    private String handleCommand(String input) {
+    private String handleInput(String input) {
         String trimmedInput = input == null ? "" : input.trim();
         if (trimmedInput.isEmpty()) {
-            return "Zadej prikaz. Pouzij 'pomoc' pro napovedu.";
+            return world.isQuestionPromptActive(player)
+                    ? "Please enter an answer or type 'prompter' for a hint."
+                    : "Please enter a command.";
+        }
+
+        String normalizedInput = MudWorld.normalize(trimmedInput);
+        if (isExitCommand(normalizedInput)) {
+            running = false;
+            return "Connection closing. Goodbye!";
+        }
+
+        if (world.isCometPromptActive(player)) {
+            return world.addCrystalToComet(player, trimmedInput);
+        }
+        if (world.isQuestionPromptActive(player)) {
+            return world.answerQuestion(player, trimmedInput);
         }
 
         String[] parts = trimmedInput.split("\\s+", 2);
@@ -92,41 +142,28 @@ public class MudClientSession implements Runnable {
         String argument = parts.length > 1 ? parts[1].trim() : "";
 
         return switch (command) {
-            case "pomoc", "help" -> helpText();
-            case "prozkoumej", "look", "rozhledni" -> world.describeRoom(player);
-            case "jdi", "go", "fly" -> world.movePlayer(player, argument);
-            case "vezmi", "take", "get" -> world.takeItem(player, argument);
-            case "odloz", "drop" -> world.dropItem(player, argument);
-            case "inventar", "inventory", "bag" -> world.describeInventory(player);
-            case "mluv", "talk" -> world.talkToNpc(player, argument);
-            case "konec", "quit", "leave", "exit" -> {
-                running = false;
-                yield "Spojeni se serverem se ukoncuje. Ahoj!";
-            }
-            default -> "Neznamy prikaz. Pouzij 'pomoc' pro seznam podporovanych prikazu.";
+            case "help", "pomoc" -> world.helpText(player);
+            case "rules" -> world.rulesText();
+            case "explore", "look", "prozkoumej" -> world.describeRoom(player);
+            case "fly", "jdi", "go" -> world.movePlayer(player, argument);
+            case "talk", "mluv" -> world.talkToNpc(player, argument);
+            case "take", "vezmi", "get" -> world.takeCrystal(player, argument);
+            case "position" -> world.positionCrystals(player);
+            case "show", "inventory", "inventar", "bag" -> world.showCrystals(player);
+            case "hint" -> world.giveHint();
+            case "prompter" -> world.prompterHint(player);
+            case "check" -> world.checkCrystals(player);
+            case "comet" -> world.startCometSelection(player, argument);
+            case "cometplan" -> world.describeComets(player);
+            case "bigbang" -> world.triggerBigBang(player);
+            case "save" -> accountStore.saveProgress(player) ? "Progress saved successfully." : "Saving failed.";
+            case "load" -> world.loadProgress(player, accountStore.load(player.getName()));
+            default -> "Invalid command";
         };
     }
 
-    private String helpText() {
-        return """
-                Dostupne prikazy:
-                - pomoc | help
-                  Zobrazi seznam prikazu a kratky popis pouziti.
-                - prozkoumej | look
-                  Vypise nazev mistnosti, popis, vychody, predmety, NPC a ostatni hrace.
-                - jdi <mistnost> | fly <planet>
-                  Presune hrace do sousedni mistnosti.
-                - vezmi <predmet> | take <item>
-                  Vezme predmet z aktualni mistnosti do inventare.
-                - odloz <predmet> | drop <item>
-                  Odlozi predmet z inventare zpet do mistnosti.
-                - inventar | inventory
-                  Zobrazi obsah inventare a maximalni kapacitu.
-                - mluv <npc> | talk <npc>
-                  Promluvi s NPC postavou v aktualni mistnosti.
-                - konec | quit
-                  Bezpecne ukonci spojeni se serverem.
-                """;
+    private boolean isExitCommand(String command) {
+        return "exit".equals(command) || "leave".equals(command) || "konec".equals(command) || "quit".equals(command);
     }
 
     private void write(String text) throws IOException {

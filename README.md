@@ -1,48 +1,73 @@
 # Mapa_Pohyb_MUD
 
-This repository keeps the original planet-based project and adds a TCP MUD server on top of the same world map.
+This repository keeps the original console game and adds a TCP multiplayer MUD server on top of the same world map.
 
-## What changed
+## What is included
 
-- The planet map from `res/map.csv` is reused as the room graph.
-- `main.Main` now starts the TCP server by default.
-- Each connected client gets its own player session and inventory.
-- Rooms show exits, items, NPCs, and other connected players.
-- Czech and English command aliases are both supported.
+- `main.Main` starts the original console game by default.
+- `main.Main --server --port 5555` starts the TCP MUD server.
+- `main.MudClient --host 127.0.0.1 --port 5555` starts a simple Java client for the TCP server.
+- The world map is loaded from `res/map.csv`.
+- Planet gatekeeper questions are loaded from `res/questions.txt`.
+- Multiplayer player accounts and progress are stored in `res/players/`.
+- Server activity is logged to `res/server.log`.
 
-## Supported commands
+## Main server commands
 
-- `pomoc` or `help`
-- `prozkoumej` or `look`
-- `jdi <mistnost>` or `fly <planet>`
-- `vezmi <predmet>` or `take <item>`
-- `odloz <predmet>` or `drop <item>`
-- `inventar` or `inventory`
-- `mluv <npc>` or `talk <npc>`
-- `konec` or `quit`
+- `help`
+- `rules`
+- `fly <planet>`
+- `talk`
+- `prompter`
+- `take`
+- `position`
+- `show`
+- `hint`
+- `check`
+- `comet`
+- `cometplan`
+- `bigbang`
+- `save`
+- `load`
+- `leave`
 
-## Run the server
+## Compile the project
 
 ```bash
 mkdir -p out
 javac -d out $(find src -path 'src/test' -prune -o -name '*.java' -print)
-java -cp out main.Main --port 5555
 ```
 
-Then connect from another terminal or a TCP client:
+## Run the original console game
+
+```bash
+java -cp out main.Main
+```
+
+## Run the TCP MUD server
+
+```bash
+java -cp out main.Main --server --port 5555
+```
+
+## Connect to the TCP MUD
+
+Using the custom Java client:
+
+```bash
+java -cp out main.MudClient --host 127.0.0.1 --port 5555
+```
+
+Or using `nc`:
 
 ```bash
 nc localhost 5555
 ```
 
-## Optional legacy console mode
-
-The original single-player console can still be started with:
-
-```bash
-java -cp out main.Main --console
-```
-
 ## IntelliJ IDEA
 
-The project can be opened and run directly as a plain Java project. Run `main.Main` and pass `--port 5555` if you want a specific port.
+Open the project as a plain Java project.
+
+- For the console version run `main.Main` with no arguments.
+- For the server run `main.Main` with `--server --port 5555`.
+- For the client run `main.MudClient` with `--host 127.0.0.1 --port 5555`.

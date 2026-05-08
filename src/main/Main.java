@@ -2,31 +2,33 @@ package main;
 
 import server.MudServer;
 
-/**
- * Entry point for the legacy console mode and the TCP MUD server.
- */
 public class Main {
 
     private static final int DEFAULT_PORT = 5555;
 
-    /**
-     * Starts the TCP MUD server by default.
-     * Use "--console" to run the original single-player console version.
-     */
     public static void main(String[] args) {
-        if (args.length > 0 && "--console".equalsIgnoreCase(args[0])) {
-            GameConsole gameConsole = new GameConsole();
-            gameConsole.start();
+        if (containsArg(args, "--server")) {
+            int port = resolvePort(args);
+            try {
+                MudServer mudServer = new MudServer(port, "res/map.csv");
+                mudServer.start();
+            } catch (Exception exception) {
+                System.out.println("Unable to start the MUD server: " + exception.getMessage());
+            }
             return;
         }
 
-        int port = resolvePort(args);
-        try {
-            MudServer mudServer = new MudServer(port, "res/map.csv");
-            mudServer.start();
-        } catch (Exception exception) {
-            System.out.println("Unable to start the MUD server: " + exception.getMessage());
+        GameConsole gameConsole = new GameConsole();
+        gameConsole.start();
+    }
+
+    private static boolean containsArg(String[] args, String target) {
+        for (String arg : args) {
+            if (target.equalsIgnoreCase(arg)) {
+                return true;
+            }
         }
+        return false;
     }
 
     private static int resolvePort(String[] args) {
